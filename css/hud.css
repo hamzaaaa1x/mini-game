@@ -1,0 +1,189 @@
+/* ─── HUD CSS ────────────────────────────────────────────── */
+/* In-game HUD overlay: distance, boost bar, chain counter   */
+/* ────────────────────────────────────────────────────────── */
+
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  font-family: var(--font-main);
+}
+
+/* ── Top-left: Distance ── */
+.hud-top-left {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+}
+
+/* ── Top-right: Best Distance ── */
+.hud-top-right {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  text-align: right;
+}
+
+.hud-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: rgba(200, 210, 230, 0.4);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.hud-value {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: rgba(232, 234, 240, 0.85);
+  text-shadow: 0 0 12px rgba(100, 160, 255, 0.2);
+}
+
+/* ── Bottom-left: Boost Bar ── */
+.hud-bottom-left {
+  position: absolute;
+  bottom: 28px;
+  left: 28px;
+}
+
+.hud-bottom-left .hud-label {
+  margin-bottom: 6px;
+}
+
+.boost-bar {
+  width: 140px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.boost-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #4488ff, #66bbff);
+  border-radius: 4px;
+  transition: width 0.15s ease, background 0.3s ease;
+  box-shadow: 0 0 8px rgba(68, 136, 255, 0.3);
+}
+
+/* ── Bottom-center: Chain Counter ── */
+.hud-bottom-center {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.chain-count {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--accent-gold);
+  letter-spacing: 2px;
+  text-shadow: 0 0 15px rgba(255, 204, 68, 0.4);
+  animation: chainPop 0.3s ease-out;
+}
+
+@keyframes chainPop {
+  0%   { transform: scale(1.4); opacity: 0.6; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ── Tutorial Hints ── */
+.hud-tutorial {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 36px;
+  background: rgba(10, 14, 26, 0.6);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity 0.8s ease;
+  z-index: 10;  /* below menu overlays (z-index 100) */
+}
+
+.tutorial-line {
+  font-size: 15px;
+  color: rgba(200, 210, 230, 0.7);
+  letter-spacing: 1px;
+}
+
+.tutorial-line strong {
+  color: var(--text-accent);
+}
+
+/* ── Debug Metrics Overlay ── */
+.hud-debug {
+  position: absolute;
+  top: 70px;
+  right: 28px;
+  background: rgba(10, 15, 30, 0.82);
+  border: 1px solid rgba(100, 180, 255, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #c0d8f8;
+  z-index: 40;
+  backdrop-filter: blur(4px);
+  min-width: 220px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  pointer-events: none;
+}
+
+.debug-title {
+  font-weight: bold;
+  color: #88c0ff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.debug-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.debug-row span:last-child {
+  font-weight: bold;
+  color: #ffe8a0;
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 600px) {
+  .hud-value { font-size: 18px; }
+  .boost-bar { width: 100px; }
+  .chain-count { font-size: 22px; }
+
+  .hud-tutorial {
+    padding: 16px 24px;
+  }
+
+  .tutorial-line {
+    font-size: 13px;
+  }
+
+  .hud-debug {
+    top: auto;
+    bottom: 80px;
+    right: 14px;
+    font-size: 9px;
+  }
+}
