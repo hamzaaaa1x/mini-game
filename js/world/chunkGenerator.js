@@ -91,6 +91,11 @@ function _generateUpTo(targetX) {
     const safeMaxGap = (phaseName === PHASE_NAMES.CITY) ? 180 :
                        (phaseName === PHASE_NAMES.SKY)  ? 260 : 320;
 
+    const escapeMultiplier = escapeMode ? GAME_CONFIG.escapeSpeedMultiplier : 1;
+    let spacing = phase.spacing
+      ? ((phase.spacing.min + Math.random() * (phase.spacing.max - phase.spacing.min)) / escapeMultiplier)
+      : 160;
+
     let gapFromPrev = spacing;
     if (lastAnchorX > 0) {
       gapFromPrev = (generatedUpToX + spacing) - lastAnchorX;

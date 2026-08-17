@@ -223,7 +223,8 @@ class GrapplingHook {
         const tangentX = -dy / dist * this.pumpInput;
         const tangentY =  dx / dist * this.pumpInput;
 
-        const force = GAME_CONFIG.swingPumpForce;
+        const force = GAME_CONFIG.swingPumpForce || 0.0015;
+        if (!Number.isFinite(tangentX) || !Number.isFinite(tangentY) || !Number.isFinite(force)) return;
         Body.applyForce(this.playerBody, this.playerBody.position, {
           x: tangentX * force,
           y: tangentY * force,
