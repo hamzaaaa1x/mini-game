@@ -1,6 +1,5 @@
 // ─── MOON ───────────────────────────────────────────────────
-// The hero object. Gravity field, grapple activation, steal
-// trigger, and procedural drawing with cached craters.
+// Moon entity with gravity field, grapple target, and craters (Section 9).
 // ─────────────────────────────────────────────────────────────
 
 import { GAME_CONFIG } from '../config.js';
@@ -11,13 +10,21 @@ const { Bodies, Body, Constraint } = Matter;
 class Moon {
   constructor() {
     this.body = null;
-    this.x = 0;
-    this.y = 0;
+    this.x = GAME_CONFIG.moonDistance;
+    this.y = 200;
     this.radius = GAME_CONFIG.moonRadius;
-    this.craters = [];        // cached crater data
     this.stolen = false;
-    this.tether = null;       // constraint to player during escape
-    this.glowPhase = 0;       // for pulsing glow animation
+    this.escapeConstraint = null;
+
+    // Deterministic craters (Section 15.4: cached once, not randomized every frame)
+    this.craters = [
+      { ox: -30, oy: -20, r: 18 },
+      { ox: 20,  oy: -40, r: 14 },
+      { ox: -10, oy: 30,  r: 22 },
+      { ox: 40,  oy: 15,  r: 12 },
+      { ox: -45, oy: 10,  r: 10 },
+      { ox: 15,  oy: 45,  r: 16 },
+    ];
   }
 
   create(x, y) {
@@ -30,176 +37,115 @@ class Moon {
       label: 'moon',
       collisionFilter: {
         category: CATEGORIES.ANCHOR,
-        mask: CATEGORIES.PLAYER | CATEGORIES.HOOK_TIP,
+        mask: CATEGORIES.HOOK_TIP,
       },
       plugin: {
-        grappleable: false,   // starts ungrappleable — activated when close
+        grappleable: false, // only becomes grappleable in approach radius (Section 9)
         type: 'moon',
-        moving: false,
-        dangerous: false,
       },
     });
 
     addToWorld(this.body);
-
-    // Generate cached craters (random but deterministic per run)
-    this._generateCraters();
   }
 
-  _generateCraters() {
-    this.craters = [];
-    const count = 5 + Math.floor(Math.random() * 4);
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = Math.random() * this.radius * 0.7;
-      this.craters.push({
-        ox: Math.cos(angle) * dist,
-        oy: Math.sin(angle) * dist,
-        r: 6 + Math.random() * 15,
-        shade: 0.05 + Math.random() * 0.1,
-      });
-    }
-  }
-
-  /**
-   * Update moon logic each frame.
-   * Returns a force vector to apply to the player if within gravity radius.
-   */
   update(playerPos) {
-    if (!this.body) return null;
+    if (!this.body) return;
 
-    this.glowPhase += 0.02;
-
+    // Apply gentle gravity pull within moonGravityRadius (Section 9)
     const dx = this.x - playerPos.x;
     const dy = this.y - playerPos.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    // Activate grapple point when player is close enough
-    if (dist < GAME_CONFIG.moonApproachRadius && !this.stolen) {
-      this.body.plugin.grappleable = true;
-    } else if (dist > GAME_CONFIG.moonApproachRadius + 100) {
-      this.body.plugin.grappleable = false;
+    if (dist < GAME_CONFIG.moonGravityRadius && dist > 10 && !this.stolen) {
+      const pullForce = GAME_CONFIG.moonPullForce;
+      const fx = (dx / dist) * pullForce;
+      const fy = (dy / dist) * pullForce;
+
+      if (Number.isFinite(fx) && Number.isFinite(fy)) {
+        // Body will receive pull in physicsWorld step
+      }
     }
 
-    // Gravity field pull
-    if (dist < GAME_CONFIG.moonGravityRadius && dist > 10) {
-      const force = GAME_CONFIG.moonPullForce;
-      return {
-        x: (dx / dist) * force,
-        y: (dy / dist) * force,
-      };
+    // Enable grapple when within approach radius
+    if (this.body.plugin) {
+      this.body.plugin.grappleable = dist < GAME_CONFIG.moonApproachRadius || this.stolen;
     }
-
-    return null;
   }
 
-  /** Called when player grapples the moon — triggers steal */
-  steal() {
+  /** Attach moon to player for escape mode (Section 11) */
+  attachToPlayer(playerBody) {
     this.stolen = true;
     if (this.body) {
-      this.body.plugin.grappleable = false;
       Body.setStatic(this.body, false);
+      Body.setMass(this.body, 5);
+
+      this.escapeConstraint = Constraint.create({
+        bodyA: playerBody,
+        bodyB: this.body,
+        length: 140,
+        stiffness: 0.15,
+        damping: 0.05,
+        render: { visible: false },
+      });
+
+      addConstraint(this.escapeConstraint);
     }
-  }
-
-  /** Attach moon to player for escape mode */
-  attachToPlayer(playerBody) {
-    if (!this.body || !playerBody) return;
-
-    Body.setStatic(this.body, false);
-    Body.setMass(this.body, 0.5);
-
-    this.tether = Constraint.create({
-      bodyA: playerBody,
-      bodyB: this.body,
-      length: 60,
-      stiffness: 0.6,
-      damping: 0.1,
-      render: { visible: false },
-    });
-
-    addConstraint(this.tether);
-  }
-
-  /** Draw the moon procedurally */
-  draw(ctx) {
-    const x = this.body ? this.body.position.x : this.x;
-    const y = this.body ? this.body.position.y : this.y;
-    const r = this.radius;
-
-    ctx.save();
-
-    // Outer glow (pulsing)
-    const glowSize = 30 + Math.sin(this.glowPhase) * 8;
-    ctx.shadowColor = 'rgba(255, 248, 220, 0.5)';
-    ctx.shadowBlur = glowSize;
-
-    // Main body — radial gradient
-    const grad = ctx.createRadialGradient(
-      x - r * 0.15, y - r * 0.15, r * 0.1,
-      x, y, r
-    );
-    grad.addColorStop(0, '#f5f0e8');
-    grad.addColorStop(0.6, '#e0d8c8');
-    grad.addColorStop(1, '#c8bca8');
-
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-
-    // Craters
-    for (const c of this.craters) {
-      ctx.fillStyle = `rgba(0, 0, 0, ${c.shade})`;
-      ctx.beginPath();
-      ctx.arc(x + c.ox, y + c.oy, c.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Grapple indicator when active
-    if (this.body && this.body.plugin.grappleable && !this.stolen) {
-      ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.arc(x, y, r + 10, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    // Tether line during escape
-    if (this.tether && this.tether.bodyA) {
-      ctx.strokeStyle = 'rgba(255, 220, 150, 0.6)';
-      ctx.lineWidth = 2;
-      ctx.shadowColor = 'rgba(255, 200, 100, 0.4)';
-      ctx.shadowBlur = 6;
-      ctx.beginPath();
-      ctx.moveTo(this.tether.bodyA.position.x, this.tether.bodyA.position.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    }
-
-    ctx.restore();
-  }
-
-  /** Clean up */
-  destroy() {
-    if (this.tether) {
-      removeConstraint(this.tether);
-      this.tether = null;
-    }
-    if (this.body) {
-      removeFromWorld(this.body);
-      this.body = null;
-    }
-    this.stolen = false;
   }
 
   reset(x, y) {
     this.destroy();
     this.create(x, y);
+  }
+
+  destroy() {
+    if (this.escapeConstraint) {
+      removeConstraint(this.escapeConstraint);
+      this.escapeConstraint = null;
+    }
+    if (this.body) {
+      removeFromWorld(this.body);
+      this.body = null;
+    }
+  }
+
+  draw(ctx) {
+    const curX = this.body ? this.body.position.x : this.x;
+    const curY = this.body ? this.body.position.y : this.y;
+    const r = this.radius;
+
+    ctx.save();
+    ctx.translate(curX, curY);
+
+    // Outer warm glow (Section 15.4)
+    ctx.shadowColor = 'rgba(255, 248, 220, 0.4)';
+    ctx.shadowBlur = 40;
+
+    // Moon circle with radial gradient
+    const grad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.6, '#f4eedb');
+    grad.addColorStop(1, '#d8d0ba');
+    ctx.fillStyle = grad;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Craters
+    ctx.fillStyle = 'rgba(160, 150, 130, 0.35)';
+    for (const c of this.craters) {
+      ctx.beginPath();
+      ctx.arc(c.ox, c.oy, c.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner shadow for crater depth
+      ctx.strokeStyle = 'rgba(110, 100, 85, 0.25)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 }
 

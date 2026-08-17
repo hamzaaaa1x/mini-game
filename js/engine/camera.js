@@ -16,7 +16,7 @@ class Camera {
     this.shakeY = 0;
     this.shakeIntensity = 0;
 
-    // Canvas dimensions (updated on resize)
+    // Viewport dimensions
     this.viewWidth = GAME_CONFIG.canvasWidth;
     this.viewHeight = GAME_CONFIG.canvasHeight;
   }
@@ -25,11 +25,11 @@ class Camera {
   update(targetX, targetY, speed = 0) {
     const lerp = GAME_CONFIG.cameraLerpFactor;
 
-    // Smooth follow — lerp toward target (centered on screen)
+    // Center target on screen
     this.x += (targetX - this.viewWidth / 2 - this.x) * lerp;
     this.y += (targetY - this.viewHeight / 2 - this.y) * lerp;
 
-    // Speed-based zoom
+    // Speed-based zoom (Section 12)
     if (speed > GAME_CONFIG.highSpeedThreshold) {
       this.targetZoom = GAME_CONFIG.highSpeedZoom;
     } else {
@@ -37,11 +37,11 @@ class Camera {
     }
     this.zoom += (this.targetZoom - this.zoom) * GAME_CONFIG.zoomLerpFactor;
 
-    // Decay shake
+    // Shake decay
     if (this.shakeIntensity > 0.1) {
       this.shakeX = (Math.random() - 0.5) * 2 * this.shakeIntensity;
       this.shakeY = (Math.random() - 0.5) * 2 * this.shakeIntensity;
-      this.shakeIntensity *= GAME_CONFIG.shakeDecay;
+      this.shakeIntensity *= 0.92;
     } else {
       this.shakeX = 0;
       this.shakeY = 0;
@@ -49,18 +49,15 @@ class Camera {
     }
   }
 
-  /** Trigger a camera shake */
   shake(intensity) {
     this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
   }
 
-  /** Set zoom directly (for steal sequence) */
   setZoom(z) {
     this.zoom = z;
     this.targetZoom = z;
   }
 
-  /** Apply camera transform to a canvas context */
   applyTransform(ctx) {
     const cx = this.viewWidth / 2;
     const cy = this.viewHeight / 2;
@@ -72,12 +69,10 @@ class Camera {
     ctx.translate(-this.x + this.shakeX, -this.y + this.shakeY);
   }
 
-  /** Restore canvas context after camera transform */
   restoreTransform(ctx) {
     ctx.restore();
   }
 
-  /** Convert screen coordinates to world coordinates */
   screenToWorld(screenX, screenY) {
     const cx = this.viewWidth / 2;
     const cy = this.viewHeight / 2;
@@ -87,7 +82,6 @@ class Camera {
     return { x: wx, y: wy };
   }
 
-  /** Get the visible world bounds */
   getBounds() {
     const hw = (this.viewWidth / 2) / this.zoom;
     const hh = (this.viewHeight / 2) / this.zoom;
@@ -101,7 +95,6 @@ class Camera {
     };
   }
 
-  /** Reset to default */
   reset() {
     this.x = 0;
     this.y = 0;

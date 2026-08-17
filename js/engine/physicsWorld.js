@@ -1,12 +1,11 @@
 // ─── PHYSICS WORLD ──────────────────────────────────────────
-// Matter.js engine/world setup, collision categories, events.
+// Matter.js engine/world setup, collision bitmasks, bodies.
 // ─────────────────────────────────────────────────────────────
 
 import { GAME_CONFIG } from '../config.js';
 
-const { Engine, World, Bodies, Body, Events, Composite } = Matter;
+const { Engine, World, Bodies, Body, Events, Composite, Constraint } = Matter;
 
-// Collision categories (bitmasks)
 export const CATEGORIES = {
   PLAYER:   0x0001,
   ANCHOR:   0x0002,
@@ -25,12 +24,12 @@ export function createPhysicsWorld() {
   });
   world = engine.world;
 
-  // Create ground/death plane (static, invisible — kills the player)
+  // Static ground plane that ends run on contact
   const ground = Bodies.rectangle(
-    5000,                       // far enough to cover the level
-    GAME_CONFIG.groundY + 50,   // slightly below ground line
-    100000,                     // very wide
-    100,                        // thick
+    50000,
+    GAME_CONFIG.groundY + 100,
+    200000,
+    200,
     {
       isStatic: true,
       label: 'ground',
@@ -57,46 +56,51 @@ export function stepPhysics(delta = 1000 / 60) {
 }
 
 export function addToWorld(...bodies) {
-  if (world) World.add(world, bodies);
+  if (world && bodies.length > 0) {
+    World.add(world, bodies);
+  }
 }
 
 export function removeFromWorld(...bodies) {
-  if (world) {
-    bodies.forEach(b => {
-      if (b) Composite.remove(world, b, true);
-    });
+  if (world && bodies.length > 0) {
+    for (const b of bodies) {
+      if (b) {
+        try {
+          Composite.remove(world, b, true);
+        } catch (e) {
+          // Body already removed
+        }
+      }
+    }
   }
 }
 
 export function addConstraint(constraint) {
-  if (world) World.add(world, constraint);
+  if (world && constraint) {
+    World.add(world, constraint);
+  }
 }
 
 export function removeConstraint(constraint) {
-  if (world) {
+  if (world && constraint) {
     try {
       Composite.remove(world, constraint);
-    } catch(e) {
-      // Constraint may already be removed
+    } catch (e) {
+      // Constraint already removed
     }
   }
 }
 
 export function onCollisionStart(callback) {
-  if (engine) Events.on(engine, 'collisionStart', callback);
-}
-
-export function clearWorld() {
-  if (world) {
-    World.clear(world, false);
-    Engine.clear(engine);
+  if (engine) {
+    Events.on(engine, 'collisionStart', callback);
   }
 }
 
 export function setGravity(x, y) {
   if (engine) {
-    engine.gravity.x = x;
-    engine.gravity.y = y;
+    if (Number.isFinite(x)) engine.gravity.x = x;
+    if (Number.isFinite(y)) engine.gravity.y = y;
   }
 }
 

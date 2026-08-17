@@ -4,75 +4,32 @@
 
 A physics-based browser game where you swing on a grappling hook through a city, sky, and space — and the goal is to literally steal the Moon and escape with it.
 
-## Quick Start
+---
 
-1. Serve the project with any static file server:
-   ```bash
-   npx http-server . -p 8080
-   ```
-2. Open `http://localhost:8080` in your browser.
-3. Click **STEAL IT** and start swinging!
+## 🎮 How to Play
 
-## Controls
+1. **Aim**: Move mouse cursor to aim your grappling hook.
+2. **Grapple**: **Click & Hold** left mouse button to fire and swing on anchors.
+3. **Fly**: **Release Click** to let go and soar forward with momentum.
+4. **Boost**: Tap **Space** to trigger an emergency thruster burst.
+5. **Restart**: Press **R** to restart immediately.
+6. **Pause**: Press **Escape** to pause or resume.
 
-| Input | Action |
-|---|---|
-| **Mouse move** | Aim grappling hook |
-| **Left click & hold** | Fire & attach hook toward cursor |
-| **Release click** | Release hook, preserve velocity |
-| **A / D or Left / Right arrows** | Pump swing (add tangential momentum) |
-| **Space** | Boost |
-| **R** | Instant restart |
-| **Esc** | Pause / resume |
+---
 
-## Tech Stack
+## 🚀 Running Locally
 
-- **Vanilla JavaScript** (ES modules)
-- **HTML5 Canvas 2D** rendering
-- **Matter.js** for physics
-- **WebAudio** for procedural sound effects
-- No external images — 100% procedural art
-- No backend — `localStorage` only
+This game is built with vanilla JavaScript (ES modules) and HTML5 Canvas with Matter.js physics. Because modern browsers enforce CORS restrictions on ES modules, open it using a local static web server:
 
-## Project Structure
+```bash
+# Option 1: Using npx http-server (Recommended)
+npx -y http-server . -p 3000 -c-1 --cors
 
-```
-steal-the-moon/
-├── index.html
-├── css/
-│   ├── main.css
-│   ├── menu.css
-│   └── hud.css
-├── js/
-│   ├── main.js
-│   ├── config.js
-│   ├── stateMachine.js
-│   ├── scoring.js
-│   ├── engine/
-│   │   ├── physicsWorld.js
-│   │   ├── camera.js
-│   │   └── loop.js
-│   ├── entities/
-│   │   ├── player.js
-│   │   ├── grapplingHook.js
-│   │   ├── moon.js
-│   │   └── anchors.js
-│   ├── world/
-│   │   ├── phases.js
-│   │   └── chunkGenerator.js
-│   ├── fx/
-│   │   ├── particles.js
-│   │   └── screenShake.js
-│   ├── ui/
-│   │   ├── hud.js
-│   │   ├── menu.js
-│   │   └── toastText.js
-│   └── audio/
-│       └── audio.js
-└── assets/
-    └── audio/
+# Option 2: Using npx serve
+npx -y serve . -p 3000
+
+# Option 3: Using Python 3
+python3 -m http.server 3000
 ```
 
-## License
-
-MIT
+Then open **`http://localhost:3000`** in your browser.

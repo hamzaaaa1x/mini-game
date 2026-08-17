@@ -6,39 +6,44 @@
   <meta name="description" content="A physics-based browser game where you swing on a grappling hook through a city, sky, and space — and the goal is to literally steal the Moon.">
   <title>STEAL THE MOON 🌙 — Hook it. Swing it. Steal it.</title>
 
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+
   <!-- Styles -->
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/menu.css">
   <link rel="stylesheet" href="css/hud.css">
 
-  <!-- Immediate visible error display -->
+  <!-- Immediate Error Boundary -->
   <script>
     window.addEventListener('error', function(e) {
-      var errBox = document.getElementById('boot-error-display');
-      if (!errBox) {
-        errBox = document.createElement('div');
-        errBox.id = 'boot-error-display';
-        errBox.style.cssText = 'position:fixed; top:0; left:0; width:100%; z-index:999999; background:#c62828; color:#fff; padding:20px; font-family:monospace; font-size:14px; white-space:pre-wrap; box-shadow:0 4px 12px rgba(0,0,0,0.5);';
-        document.body.appendChild(errBox);
+      var box = document.getElementById('boot-error-overlay');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'boot-error-overlay';
+        box.style.cssText = 'position:fixed; top:0; left:0; width:100%; z-index:999999; background:#d32f2f; color:#ffffff; padding:18px 24px; font-family:monospace; font-size:14px; font-weight:bold; white-space:pre-wrap; box-shadow:0 4px 12px rgba(0,0,0,0.5);';
+        document.body.appendChild(box);
       }
       var msg = e.message || e.error || String(e);
       var src = (e.filename || '') + (e.lineno ? ':' + e.lineno : '');
-      errBox.innerHTML = '<strong>⚠️ SCRIPT / BOOT ERROR:</strong>\n' + msg + (src ? '\nSource: ' + src : '');
+      box.innerHTML = '⚠️ ERROR: ' + msg + (src ? '\nLocation: ' + src : '');
     });
 
     window.addEventListener('unhandledrejection', function(e) {
-      var errBox = document.getElementById('boot-error-display');
-      if (!errBox) {
-        errBox = document.createElement('div');
-        errBox.id = 'boot-error-display';
-        errBox.style.cssText = 'position:fixed; top:0; left:0; width:100%; z-index:999999; background:#c62828; color:#fff; padding:20px; font-family:monospace; font-size:14px; white-space:pre-wrap; box-shadow:0 4px 12px rgba(0,0,0,0.5);';
-        document.body.appendChild(errBox);
+      var box = document.getElementById('boot-error-overlay');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'boot-error-overlay';
+        box.style.cssText = 'position:fixed; top:0; left:0; width:100%; z-index:999999; background:#d32f2f; color:#ffffff; padding:18px 24px; font-family:monospace; font-size:14px; font-weight:bold; white-space:pre-wrap; box-shadow:0 4px 12px rgba(0,0,0,0.5);';
+        document.body.appendChild(box);
       }
-      errBox.innerHTML = '<strong>⚠️ UNHANDLED PROMISE REJECTION:</strong>\n' + (e.reason?.stack || e.reason || String(e));
+      box.innerHTML = '⚠️ UNHANDLED PROMISE: ' + (e.reason?.stack || e.reason || String(e));
     });
   </script>
 
-  <!-- Local Matter.js with CDN fallback -->
+  <!-- Local Matter.js with CDN Fallback -->
   <script src="js/libs/matter.min.js"></script>
   <script>
     if (typeof Matter === 'undefined') {
@@ -48,14 +53,11 @@
     }
   </script>
 
-  <!-- Favicon (inline SVG moon) -->
+  <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌙</text></svg>">
 </head>
 <body>
-  <!-- Game Canvas -->
   <canvas id="game-canvas"></canvas>
-
-  <!-- Entry Point -->
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

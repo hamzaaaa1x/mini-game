@@ -1,13 +1,11 @@
 // ─── ANCHORS ────────────────────────────────────────────────
-// Factory functions for all grappleable objects: buildings,
-// lamps, cranes, cloud posts, balloons, satellites, asteroids.
+// Factory functions & rendering for all grappleable objects (Section 8).
 // ─────────────────────────────────────────────────────────────
 
 import { addToWorld, removeFromWorld, CATEGORIES } from '../engine/physicsWorld.js';
 
 const { Bodies, Body } = Matter;
 
-// ── Tracked anchors for cleanup ──
 let activeAnchors = [];
 
 function makePlugin(type, opts = {}) {
@@ -24,21 +22,21 @@ function makePlugin(type, opts = {}) {
 // FACTORY FUNCTIONS
 // ═══════════════════════════════════════════════════════════
 
-/** City building — tall rectangle with lit windows */
+/** City building (Section 15.2) */
 export function createBuilding(x, groundY, width, height) {
   const bx = x + width / 2;
   const by = groundY - height / 2;
 
-  // Generate window pattern
+  // Generate deterministic window pattern
   const windows = [];
-  const cols = Math.floor(width / 20);
-  const rows = Math.floor(height / 24);
-  for (let col = 0; col < cols; col++) {
-    for (let row = 0; row < rows; row++) {
-      if (Math.random() > 0.4) {
+  const cols = Math.max(1, Math.floor(width / 20));
+  const rows = Math.max(1, Math.floor(height / 24));
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      if (Math.random() > 0.35) {
         windows.push({
-          ox: -width / 2 + 8 + col * 20,
-          oy: -height / 2 + 10 + row * 24,
+          ox: -width / 2 + 8 + c * 20,
+          oy: -height / 2 + 10 + r * 24,
           lit: Math.random() > 0.3,
           hue: Math.random() > 0.7 ? '#ffd866' : '#ffe4a0',
         });
@@ -63,12 +61,11 @@ export function createBuilding(x, groundY, width, height) {
   return body;
 }
 
-/** Street lamp — thin pole with round top */
-export function createLamp(x, groundY, height = 90) {
-  const bx = x;
+/** Street lamp */
+export function createLamp(x, groundY, height = 180) {
   const by = groundY - height / 2;
 
-  const body = Bodies.rectangle(bx, by, 6, height, {
+  const body = Bodies.rectangle(x, by, 8, height, {
     isStatic: true,
     label: 'lamp',
     collisionFilter: {
@@ -85,45 +82,30 @@ export function createLamp(x, groundY, height = 90) {
   return body;
 }
 
-/** Crane — L-shaped static body */
-export function createCrane(x, groundY, height = 200) {
-  const baseWidth = 10;
-  const armLength = 80;
+/** Construction Crane */
+export function createCrane(x, groundY, height = 240) {
+  const by = groundY - height / 2;
 
-  // Vertical part
-  const vertBody = Bodies.rectangle(x, groundY - height / 2, baseWidth, height, {
+  const body = Bodies.rectangle(x, by, 12, height, {
     isStatic: true,
-    label: 'crane_vert',
+    label: 'crane',
     collisionFilter: {
       category: CATEGORIES.ANCHOR,
       mask: CATEGORIES.PLAYER | CATEGORIES.HOOK_TIP,
     },
     plugin: makePlugin('crane', {
-      drawData: { height, armLength, isVertical: true },
+      drawData: { height },
     }),
   });
 
-  // Horizontal arm
-  const armBody = Bodies.rectangle(x + armLength / 2, groundY - height, armLength, 8, {
-    isStatic: true,
-    label: 'crane_arm',
-    collisionFilter: {
-      category: CATEGORIES.ANCHOR,
-      mask: CATEGORIES.PLAYER | CATEGORIES.HOOK_TIP,
-    },
-    plugin: makePlugin('crane', {
-      drawData: { height, armLength, isArm: true },
-    }),
-  });
-
-  addToWorld(vertBody, armBody);
-  activeAnchors.push(vertBody, armBody);
-  return [vertBody, armBody];
+  addToWorld(body);
+  activeAnchors.push(body);
+  return body;
 }
 
-/** Cloud post — a cloud shape with a small grapple point */
+/** Cloud with grapple post */
 export function createCloudPost(x, y) {
-  const body = Bodies.circle(x, y, 15, {
+  const body = Bodies.circle(x, y, 22, {
     isStatic: true,
     label: 'cloudPost',
     collisionFilter: {
@@ -138,10 +120,10 @@ export function createCloudPost(x, y) {
   return body;
 }
 
-/** Hot air balloon — kinematic, moves in a gentle sine path */
+/** Kinematic Hot Air Balloon */
 export function createBalloon(x, y, amplitude = 40, speed = 0.0008) {
-  const body = Bodies.circle(x, y, 20, {
-    isStatic: true,
+  const body = Bodies.circle(x, y, 26, {
+    isStatic: false,
     label: 'balloon',
     collisionFilter: {
       category: CATEGORIES.ANCHOR,
@@ -149,19 +131,22 @@ export function createBalloon(x, y, amplitude = 40, speed = 0.0008) {
     },
     plugin: makePlugin('balloon', {
       moving: true,
-      drawData: { originX: x, originY: y, amplitude, speed, phase: Math.random() * Math.PI * 2 },
+      drawData: { originY: y, amplitude, speed, phase: Math.random() * Math.PI * 2 },
     }),
   });
+
+  Body.setMass(body, Infinity);
+  body.isKinematic = true;
 
   addToWorld(body);
   activeAnchors.push(body);
   return body;
 }
 
-/** Satellite — slowly drifting in space */
+/** Drifting Satellite */
 export function createSatellite(x, y, driftSpeed = 0.3) {
-  const body = Bodies.rectangle(x, y, 30, 10, {
-    isStatic: true,
+  const body = Bodies.rectangle(x, y, 32, 18, {
+    isStatic: false,
     label: 'satellite',
     collisionFilter: {
       category: CATEGORIES.ANCHOR,
@@ -169,17 +154,20 @@ export function createSatellite(x, y, driftSpeed = 0.3) {
     },
     plugin: makePlugin('satellite', {
       moving: true,
-      drawData: { driftSpeed, originX: x, originY: y, phase: Math.random() * Math.PI * 2 },
+      drawData: { driftSpeed, originY: y, phase: Math.random() * Math.PI * 2 },
     }),
   });
+
+  Body.setMass(body, Infinity);
+  body.isKinematic = true;
 
   addToWorld(body);
   activeAnchors.push(body);
   return body;
 }
 
-/** Asteroid — dangerous, cannot be grappled */
-export function createAsteroid(x, y, radius = 18) {
+/** Dangerous Asteroid */
+export function createAsteroid(x, y, radius = 20) {
   const body = Bodies.circle(x, y, radius, {
     isStatic: true,
     label: 'asteroid',
@@ -189,7 +177,7 @@ export function createAsteroid(x, y, radius = 18) {
     },
     plugin: makePlugin('asteroid', {
       dangerous: true,
-      drawData: { radius, jagged: _generateJaggedShape(radius) },
+      drawData: { radius },
     }),
   });
 
@@ -198,42 +186,59 @@ export function createAsteroid(x, y, radius = 18) {
   return body;
 }
 
-function _generateJaggedShape(radius) {
-  const points = [];
-  const segments = 8 + Math.floor(Math.random() * 4);
-  for (let i = 0; i < segments; i++) {
-    const angle = (i / segments) * Math.PI * 2;
-    const r = radius * (0.7 + Math.random() * 0.4);
-    points.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
-  }
-  return points;
-}
-
 // ═══════════════════════════════════════════════════════════
-// UPDATE & DRAW
+// LIFECYCLE & RENDERING
 // ═══════════════════════════════════════════════════════════
 
-/** Update kinematic anchors (balloons, satellites) */
 export function updateAnchors(time) {
   for (const body of activeAnchors) {
     if (!body.plugin || !body.plugin.moving) continue;
-
     const d = body.plugin.drawData;
     if (!d) continue;
 
-    if (body.label === 'balloon' && d.originX !== undefined) {
+    if (body.label === 'balloon') {
       const newY = d.originY + Math.sin(time * d.speed + d.phase) * d.amplitude;
-      Body.setPosition(body, { x: d.originX, y: newY });
-    }
-
-    if (body.label === 'satellite' && d.originX !== undefined) {
-      const newY = d.originY + Math.sin(time * 0.0005 + d.phase) * 30;
       Body.setPosition(body, { x: body.position.x, y: newY });
+    } else if (body.label === 'satellite') {
+      const newY = d.originY + Math.sin(time * 0.0006 + d.phase) * 20;
+      Body.setPosition(body, { x: body.position.x - d.driftSpeed * 0.1, y: newY });
     }
   }
 }
 
-/** Draw all active anchors */
+export function despawnBehind(xThreshold) {
+  const toRemove = activeAnchors.filter(b => b.position.x < xThreshold);
+  for (const b of toRemove) {
+    removeFromWorld(b);
+  }
+  activeAnchors = activeAnchors.filter(b => b.position.x >= xThreshold);
+}
+
+export function clearAnchors() {
+  for (const b of activeAnchors) {
+    removeFromWorld(b);
+  }
+  activeAnchors = [];
+}
+
+export function getNextAnchorAhead(playerX) {
+  let closest = null;
+  let closestDist = Infinity;
+
+  for (const body of activeAnchors) {
+    if (!body.plugin || !body.plugin.grappleable) continue;
+    const ax = body.position.x;
+    if (ax > playerX + 10) {
+      const dist = ax - playerX;
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = body;
+      }
+    }
+  }
+  return closest;
+}
+
 export function drawAnchors(ctx) {
   for (const body of activeAnchors) {
     const { x, y } = body.position;
@@ -246,11 +251,8 @@ export function drawAnchors(ctx) {
       case 'lamp':
         _drawLamp(ctx, x, y, d);
         break;
-      case 'crane_vert':
-        _drawCraneVert(ctx, x, y, d);
-        break;
-      case 'crane_arm':
-        _drawCraneArm(ctx, x, y, d);
+      case 'crane':
+        _drawCrane(ctx, x, y, d);
         break;
       case 'cloudPost':
         _drawCloudPost(ctx, x, y);
@@ -275,25 +277,23 @@ function _drawBuilding(ctx, x, y, d) {
   const hw = d.width / 2;
   const hh = d.height / 2;
 
-  // Building body
+  // Dark slate rectangle (Section 15.2)
   ctx.fillStyle = '#1a2035';
   ctx.fillRect(x - hw, y - hh, d.width, d.height);
 
-  // Edges
-  ctx.strokeStyle = '#252e48';
+  ctx.strokeStyle = '#28334e';
   ctx.lineWidth = 1;
   ctx.strokeRect(x - hw, y - hh, d.width, d.height);
 
-  // Windows
+  // Lit windows
   if (d.windows) {
     for (const w of d.windows) {
       ctx.fillStyle = w.lit ? w.hue : '#0e1525';
-      ctx.fillRect(x + w.ox, y + w.oy, 10, 12);
-
+      ctx.fillRect(x + w.ox, y + w.oy, 9, 11);
       if (w.lit) {
         ctx.shadowColor = w.hue;
         ctx.shadowBlur = 4;
-        ctx.fillRect(x + w.ox, y + w.oy, 10, 12);
+        ctx.fillRect(x + w.ox, y + w.oy, 9, 11);
         ctx.shadowBlur = 0;
       }
     }
@@ -305,211 +305,109 @@ function _drawLamp(ctx, x, y, d) {
   const hh = d.height / 2;
 
   // Pole
-  ctx.strokeStyle = '#3a4560';
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#3a4660';
+  ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(x, y + hh);
   ctx.lineTo(x, y - hh);
   ctx.stroke();
 
-  // Lamp head
+  // Glowing lamp head
   ctx.fillStyle = '#ffdd88';
   ctx.shadowColor = '#ffdd88';
-  ctx.shadowBlur = 15;
+  ctx.shadowBlur = 12;
   ctx.beginPath();
-  ctx.arc(x, y - hh, 8, 0, Math.PI * 2);
+  ctx.arc(x, y - hh, 7, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
 }
 
-function _drawCraneVert(ctx, x, y, d) {
+function _drawCrane(ctx, x, y, d) {
   if (!d) return;
-  ctx.strokeStyle = '#4a5570';
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.moveTo(x, y + d.height / 2);
-  ctx.lineTo(x, y - d.height / 2);
-  ctx.stroke();
-}
+  const hh = d.height / 2;
 
-function _drawCraneArm(ctx, x, y, d) {
-  if (!d) return;
-  ctx.strokeStyle = '#4a5570';
-  ctx.lineWidth = 5;
+  ctx.strokeStyle = '#445577';
+  ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.moveTo(x - d.armLength / 2, y);
-  ctx.lineTo(x + d.armLength / 2, y);
+  ctx.moveTo(x, y + hh);
+  ctx.lineTo(x, y - hh);
+  ctx.lineTo(x + 50, y - hh);
   ctx.stroke();
 
-  // Hook dangle
-  ctx.strokeStyle = '#6a7590';
-  ctx.lineWidth = 1.5;
+  // Hook beacon
+  ctx.fillStyle = '#ffaa33';
   ctx.beginPath();
-  ctx.moveTo(x + d.armLength / 2 - 5, y);
-  ctx.lineTo(x + d.armLength / 2 - 5, y + 20);
-  ctx.stroke();
+  ctx.arc(x + 50, y - hh, 4, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function _drawCloudPost(ctx, x, y) {
-  // Cloud shape
-  ctx.fillStyle = 'rgba(200, 215, 240, 0.25)';
+  ctx.fillStyle = 'rgba(230, 240, 255, 0.25)';
   ctx.beginPath();
-  ctx.arc(x, y, 30, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(x - 20, y + 5, 20, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(x + 20, y + 5, 22, 0, Math.PI * 2);
+  ctx.arc(x, y, 22, 0, Math.PI * 2);
+  ctx.arc(x - 14, y + 4, 16, 0, Math.PI * 2);
+  ctx.arc(x + 14, y + 4, 16, 0, Math.PI * 2);
   ctx.fill();
 
-  // Grapple post
-  ctx.fillStyle = '#8899bb';
+  // Grapple core post
+  ctx.fillStyle = '#88bbff';
+  ctx.shadowColor = '#88bbff';
+  ctx.shadowBlur = 8;
   ctx.beginPath();
-  ctx.arc(x, y, 6, 0, Math.PI * 2);
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
   ctx.fill();
+  ctx.shadowBlur = 0;
 }
 
 function _drawBalloon(ctx, x, y) {
   // Balloon envelope
-  const grad = ctx.createRadialGradient(x, y - 5, 3, x, y, 18);
-  grad.addColorStop(0, '#ff6644');
-  grad.addColorStop(1, '#cc3322');
-  ctx.fillStyle = grad;
+  ctx.fillStyle = '#ff6655';
   ctx.beginPath();
-  ctx.arc(x, y, 18, 0, Math.PI * 2);
+  ctx.arc(x, y - 8, 18, 0, Math.PI * 2);
   ctx.fill();
 
   // Basket
-  ctx.strokeStyle = '#8b6914';
+  ctx.fillStyle = '#d49b6a';
+  ctx.fillRect(x - 5, y + 16, 10, 8);
+
+  // Strings
+  ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(x - 6, y + 18);
-  ctx.lineTo(x - 8, y + 28);
-  ctx.lineTo(x + 8, y + 28);
-  ctx.lineTo(x + 6, y + 18);
-  ctx.stroke();
-
-  // Ropes
-  ctx.strokeStyle = '#aaa';
-  ctx.lineWidth = 0.5;
-  ctx.beginPath();
-  ctx.moveTo(x - 5, y + 18);
-  ctx.lineTo(x - 7, y + 28);
-  ctx.moveTo(x + 5, y + 18);
-  ctx.lineTo(x + 7, y + 28);
+  ctx.moveTo(x - 8, y + 6);
+  ctx.lineTo(x - 3, y + 16);
+  ctx.moveTo(x + 8, y + 6);
+  ctx.lineTo(x + 3, y + 16);
   ctx.stroke();
 }
 
 function _drawSatellite(ctx, x, y) {
   // Body
-  ctx.fillStyle = '#8899aa';
-  ctx.fillRect(x - 8, y - 5, 16, 10);
+  ctx.fillStyle = '#d0d8e8';
+  ctx.fillRect(x - 8, y - 6, 16, 12);
 
   // Solar panels
-  ctx.fillStyle = '#3355aa';
-  ctx.fillRect(x - 28, y - 4, 18, 8);
-  ctx.fillRect(x + 10, y - 4, 18, 8);
-
-  // Panel lines
-  ctx.strokeStyle = '#5577cc';
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i < 3; i++) {
-    const lx = x - 26 + i * 6;
-    ctx.beginPath();
-    ctx.moveTo(lx, y - 3);
-    ctx.lineTo(lx, y + 3);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(lx + 38, y - 3);
-    ctx.lineTo(lx + 38, y + 3);
-    ctx.stroke();
-  }
+  ctx.fillStyle = '#3388ff';
+  ctx.fillRect(x - 24, y - 4, 12, 8);
+  ctx.fillRect(x + 12, y - 4, 12, 8);
 
   // Antenna
-  ctx.strokeStyle = '#aabbcc';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(x, y - 5);
-  ctx.lineTo(x + 3, y - 12);
+  ctx.moveTo(x, y - 6);
+  ctx.lineTo(x, y - 14);
   ctx.stroke();
 }
 
 function _drawAsteroid(ctx, x, y, d) {
-  if (!d || !d.jagged) return;
-
-  ctx.fillStyle = '#5a4035';
-  ctx.strokeStyle = '#8a6a55';
+  const r = d?.radius || 18;
+  ctx.fillStyle = '#553333';
+  ctx.strokeStyle = '#ff4444';
   ctx.lineWidth = 1.5;
+
   ctx.beginPath();
-  ctx.moveTo(x + d.jagged[0].x, y + d.jagged[0].y);
-  for (let i = 1; i < d.jagged.length; i++) {
-    ctx.lineTo(x + d.jagged[i].x, y + d.jagged[i].y);
-  }
-  ctx.closePath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
-
-  // Danger glow
-  ctx.shadowColor = 'rgba(255, 80, 50, 0.4)';
-  ctx.shadowBlur = 10;
-  ctx.strokeStyle = 'rgba(255, 100, 60, 0.5)';
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-}
-
-// ═══════════════════════════════════════════════════════════
-// CLEANUP
-// ═══════════════════════════════════════════════════════════
-
-/** Remove a specific anchor */
-export function removeAnchor(body) {
-  removeFromWorld(body);
-  activeAnchors = activeAnchors.filter(b => b !== body);
-}
-
-/** Remove all anchors behind a given X position */
-export function despawnBehind(xThreshold) {
-  const toRemove = activeAnchors.filter(b => b.position.x < xThreshold);
-  for (const b of toRemove) {
-    removeFromWorld(b);
-  }
-  activeAnchors = activeAnchors.filter(b => b.position.x >= xThreshold);
-}
-
-/** Clear all anchors */
-export function clearAnchors() {
-  for (const b of activeAnchors) {
-    removeFromWorld(b);
-  }
-  activeAnchors = [];
-}
-
-/** Get count of active anchors */
-export function getActiveAnchorCount() {
-  return activeAnchors.length;
-}
-
-/** Get list of active anchors */
-export function getActiveAnchors() {
-  return activeAnchors;
-}
-
-/** Find the next grappleable anchor ahead of the player */
-export function getNextAnchorAhead(playerX) {
-  let closest = null;
-  let closestDist = Infinity;
-
-  for (const body of activeAnchors) {
-    if (!body.plugin || !body.plugin.grappleable) continue;
-    const ax = body.position.x;
-    if (ax > playerX + 10) {
-      const dist = ax - playerX;
-      if (dist < closestDist) {
-        closestDist = dist;
-        closest = body;
-      }
-    }
-  }
-  return closest;
 }
